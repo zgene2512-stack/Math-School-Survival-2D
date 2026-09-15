@@ -1,12 +1,10 @@
 import React from 'react';
 import { Volume2, VolumeX, Maximize2, Minimize2, Keyboard, Trophy, Flame, Clock, GraduationCap } from 'lucide-react';
-import { getDifficultyLevel } from '../utils/mathGenerator.js';
 
 export const GameHUD = ({
   gameState,
   score,
   highScore,
-  combo,
   maxCombo,
   enemiesDefeated,
   survivedTime,
@@ -18,8 +16,6 @@ export const GameHUD = ({
   onToggleFullscreen,
   onStartGame,
 }) => {
-  const diff = getDifficultyLevel(score);
-
   // Format detik menjadi MM:SS
   const formatTime = (totalSeconds) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -29,26 +25,8 @@ export const GameHUD = ({
 
   return (
     <>
-      {/* Top Right Controls & Timer Bar */}
+      {/* Top Right Controls Bar (Tanpa timer atau label kelas di luar papan tulis) */}
       <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 sm:gap-2">
-        {/* Survival Timer di Kanan Atas */}
-        <div
-          id="hud-survival-timer"
-          className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900/90 border border-amber-400/40 backdrop-blur text-amber-300 font-mono text-xs sm:text-sm font-bold shadow-md"
-          title="Waktu Bertahan Hidup"
-        >
-          <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 animate-pulse" />
-          <span>{formatTime(survivedTime)}</span>
-        </div>
-
-        {/* Level & Difficulty Badge (saat bermain) */}
-        {gameState === 'PLAYING' && (
-          <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-900/90 border border-sky-400/40 backdrop-blur text-xs font-mono text-sky-300">
-            <GraduationCap className="w-3.5 h-3.5 text-sky-400" />
-            <span>{diff.label}</span>
-          </div>
-        )}
-
         {/* Keypad Toggle Button */}
         <button
           id="btn-toggle-keypad"
@@ -106,30 +84,30 @@ export const GameHUD = ({
 
           <p className="text-slate-300 text-sm sm:text-base max-w-lg mt-2 leading-relaxed font-mono">
             Bapak dan Ibu Guru datang membawa soal matematika setiap <strong>5 detik</strong>.
-            Ketik jawaban yang tepat sebelum mereka mencapai mejamu!
+            Gunakan tombol angka & <strong>minus (-)</strong> bila jawabannya bernilai negatif!
           </p>
 
           {/* Kartu Karakter & Aturan */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 my-4 max-w-xl w-full text-left font-mono">
             <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
-              <div className="text-[11px] text-sky-400 font-bold">Karakter Utama</div>
+              <div className="text-[11px] text-sky-400 font-bold">Karakter Siswa</div>
               <div className="text-xs text-white mt-1">Siswa SMA</div>
-              <div className="text-[10px] text-slate-400">Baju Putih Celana Abu</div>
+              <div className="text-[10px] text-slate-400">Putih Abu-abu</div>
             </div>
             <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
-              <div className="text-[11px] text-emerald-400 font-bold">Sasaran/Guru</div>
-              <div className="text-xs text-white mt-1">Pak & Bu Guru</div>
-              <div className="text-[10px] text-slate-400">Membawa Papan Soal</div>
+              <div className="text-[11px] text-emerald-400 font-bold">Bapak & Ibu Guru</div>
+              <div className="text-xs text-white mt-1">Pemberi Soal</div>
+              <div className="text-[10px] text-slate-400">Membawa Papan Nilai</div>
             </div>
             <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
-              <div className="text-[11px] text-amber-400 font-bold">Interval Musuh</div>
-              <div className="text-xs text-white mt-1">Tiap 5 Detik</div>
-              <div className="text-[10px] text-slate-400">Muncul Terjadwal</div>
+              <div className="text-[11px] text-amber-400 font-bold">Jawaban Minus</div>
+              <div className="text-xs text-white mt-1">Dukung Nilai (-)</div>
+              <div className="text-[10px] text-slate-400">Ketik tanda minus (-)</div>
             </div>
             <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
-              <div className="text-[11px] text-purple-400 font-bold">Timer Survival</div>
-              <div className="text-xs text-white mt-1">Kanan Atas</div>
-              <div className="text-[10px] text-slate-400">Catat Rekor Waktu</div>
+              <div className="text-[11px] text-purple-400 font-bold">To-Do List Kelas</div>
+              <div className="text-xs text-white mt-1">Di Papan Tulis</div>
+              <div className="text-[10px] text-slate-400">Misi tiap tingkatan</div>
             </div>
           </div>
 

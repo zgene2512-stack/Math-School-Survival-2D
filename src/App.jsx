@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { generateMathProblem, getDifficultyLevel } from './utils/mathGenerator.js';
+import { generateMathProblem } from './utils/mathGenerator.js';
 import { sound } from './utils/audio.js';
 import { CyberKeypad } from './components/CyberKeypad.jsx';
 import { GameHUD } from './components/GameHUD.jsx';
@@ -103,7 +103,7 @@ export default function App() {
     const enemies = enemiesRef.current;
     const input = currentInputRef.current;
 
-    if (enemies.length === 0 || input === '') return;
+    if (enemies.length === 0 || input === '' || input === '-') return;
 
     // Cari guru terdekat dari meja siswa (koordinat x terkecil)
     let closestIndex = 0;
@@ -191,11 +191,26 @@ export default function App() {
     currentInputRef.current = '';
   }, []);
 
-  // Handle tombol digit
+  // Handle tombol digit (0-9)
   const handleDigit = useCallback((digit) => {
     if (gameStateRef.current !== 'PLAYING') return;
     if (currentInputRef.current.length < 8) {
       currentInputRef.current += digit;
+    }
+  }, []);
+
+  // Handle tombol Minus (-) untuk input angka negatif seperti -10, -1, dll.
+  const handleMinus = useCallback(() => {
+    if (gameStateRef.current !== 'PLAYING') return;
+    const current = currentInputRef.current;
+    if (current.startsWith('-')) {
+      // Jika sudah diawali minus, hapus tanda minus (toggle off)
+      currentInputRef.current = current.slice(1);
+    } else {
+      // Sisipkan tanda minus di depan angka (toggle on)
+      if (current.length < 8) {
+        currentInputRef.current = '-' + current;
+      }
     }
   }, []);
 
@@ -217,7 +232,7 @@ export default function App() {
     particlesRef.current = [];
     popupsRef.current = [];
     projectilesRef.current = [];
-    spawnTimerRef.current = 4000; // Guru pertama datang cepat (1 detik pertama)
+    spawnTimerRef.current = 4000; // Guru pertama datang dalam 1 detik
     shakeDurationRef.current = 0;
     lastTimeRef.current = performance.now();
 
@@ -252,7 +267,7 @@ export default function App() {
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
 
-  // Keyboard handler global
+  // Keyboard handler global (Mendukung tombol angka, minus '-', backspace, dan enter)
   useEffect(() => {
     const onKeyDown = (e) => {
       if (gameStateRef.current !== 'PLAYING') {
@@ -265,6 +280,9 @@ export default function App() {
       if (e.key >= '0' && e.key <= '9') {
         sound.playKeyBlip();
         handleDigit(e.key);
+      } else if (e.key === '-' || e.key === 'Subtract') {
+        sound.playKeyBlip();
+        handleMinus();
       } else if (e.key === 'Backspace') {
         sound.playKeyBlip();
         handleBackspace();
@@ -275,9 +293,9 @@ export default function App() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleDigit, handleBackspace, checkAnswer, initGame]);
+  }, [handleDigit, handleMinus, handleBackspace, checkAnswer, initGame]);
 
-  // Main Canvas Render Loop (Tema Sekolah & Gambar Karakter Siswa + Guru)
+  // Main Canvas Render Loop (Tema Sekolah Lengkap & Papan Tulis To-Do List)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -321,7 +339,7 @@ export default function App() {
             y: 320,
             width: 55,
             height: 100,
-            speed: 0.95 + Math.random() * 0.3, // Kecepatan langkah santai namun pasti
+            speed: 0.95 + Math.random() * 0.3,
             question: problem.question,
             answer: problem.answer,
             isFemale,
@@ -360,7 +378,7 @@ export default function App() {
           const proj = projectilesRef.current[i];
           proj.progress += 0.08;
           proj.currentX = proj.startX + (proj.targetX - proj.startX) * proj.progress;
-          // Efek parabola
+          // Efek parabola lemparan kertas
           const arc = Math.sin(proj.progress * Math.PI) * 45;
           proj.currentY = proj.startY + (proj.targetY - proj.startY) * proj.progress - arc;
 
@@ -369,7 +387,7 @@ export default function App() {
           }
         }
 
-        // Update Partikel
+        // Update Partikel Nilai
         for (let i = particlesRef.current.length - 1; i >= 0; i--) {
           const p = particlesRef.current[i];
           p.x += p.speedX;
@@ -407,29 +425,291 @@ export default function App() {
       ctx.fillStyle = wallGrad;
       ctx.fillRect(0, 0, canvas.width, 420);
 
-      // Papan Tulis Hijau Besar di Belakang Kelas
-      ctx.fillStyle = '#78350f'; // Bingkai kayu papan tulis
-      ctx.fillRect(180, 50, 540, 190);
-      ctx.fillStyle = '#064e3b'; // Permukaan papan tulis hijau
-      ctx.fillRect(190, 60, 520, 170);
+      // ==========================================
+      // HIASAN-HIASAN KELAS AGAR TIDAK SEPI
+      // ==========================================
 
-      // Tulisan Kapur di Papan Tulis
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.font = '14px "Share Tech Mono", monospace';
-      ctx.fillText('UJIAN MATEMATIKA - TAHUN AJARAN 2026', 220, 90);
-      ctx.fillText('• Jawab cepat sebelum waktu habis!', 220, 120);
-      ctx.fillText('• Interval Guru Datang: Setiap 5 Detik', 220, 145);
-
-      // Jendela Kelas di Samping
-      ctx.fillStyle = '#334155';
-      ctx.fillRect(40, 60, 100, 150);
+      // A. Jendela Kelas di Samping Kiri (dengan pemandangan langit cerah dan awan)
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(36, 56, 108, 160);
       ctx.fillStyle = '#38bdf8';
-      ctx.globalAlpha = 0.25;
-      ctx.fillRect(45, 65, 42, 65);
-      ctx.fillRect(93, 65, 42, 65);
-      ctx.fillRect(45, 135, 42, 70);
-      ctx.fillRect(93, 135, 42, 70);
+      ctx.globalAlpha = 0.35;
+      ctx.fillRect(42, 62, 44, 70);
+      ctx.fillRect(94, 62, 44, 70);
+      ctx.fillRect(42, 138, 44, 72);
+      ctx.fillRect(94, 138, 44, 72);
+      // Gorden jendela merah tua di samping
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = '#991b1b';
+      ctx.beginPath();
+      ctx.moveTo(34, 54);
+      ctx.lineTo(46, 54);
+      ctx.lineTo(40, 218);
+      ctx.lineTo(34, 218);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(146, 54);
+      ctx.lineTo(134, 54);
+      ctx.lineTo(140, 218);
+      ctx.lineTo(146, 218);
+      ctx.fill();
       ctx.globalAlpha = 1.0;
+
+      // B. Pigura Foto Presiden & Lambang Garuda di atas dinding kelas
+      // Pigura Garuda di tengah atas
+      ctx.fillStyle = '#78350f'; // Bingkai kayu emas
+      ctx.fillRect(432, 12, 36, 32);
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(435, 15, 30, 26);
+      ctx.fillStyle = '#fef08a'; // Lambang burung Garuda
+      ctx.beginPath();
+      ctx.arc(450, 26, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#b91c1c';
+      ctx.fillRect(447, 24, 6, 6);
+
+      // Pigura Foto Pahlawan / Tokoh Kiri
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(375, 16, 28, 28);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(378, 19, 22, 22);
+      ctx.fillStyle = '#334155';
+      ctx.beginPath();
+      ctx.arc(389, 29, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pigura Foto Pahlawan / Tokoh Kanan
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(497, 16, 28, 28);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(500, 19, 22, 22);
+      ctx.fillStyle = '#334155';
+      ctx.beginPath();
+      ctx.arc(511, 29, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // C. Jam Dinding Bulat Sekolah di atas papan tulis sebelah kanan
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(675, 26, 15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      // Jarum jam
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(675, 26);
+      ctx.lineTo(675, 17);
+      ctx.moveTo(675, 26);
+      ctx.lineTo(683, 26);
+      ctx.stroke();
+
+      // D. Banner / Bendera Segitiga Hiasan Kelas di Sepanjang Dinding Atas
+      const bannerColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'];
+      for (let i = 0; i < 9; i++) {
+        const bx = 160 + i * 65;
+        ctx.fillStyle = bannerColors[i % bannerColors.length];
+        ctx.beginPath();
+        ctx.moveTo(bx, 2);
+        ctx.lineTo(bx + 30, 2);
+        ctx.lineTo(bx + 15, 18);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // E. Speaker Pengumuman Sekolah di pojok kanan atas
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(835, 18, 38, 24);
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(839, 22, 30, 16);
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(844, 25, 20, 2);
+      ctx.fillRect(844, 29, 20, 2);
+      ctx.fillRect(844, 33, 20, 2);
+
+      // F. Lemari Buku / Rak Piagam Kelas di Samping Kanan
+      ctx.fillStyle = '#78350f'; // Lemari kayu
+      ctx.fillRect(735, 75, 130, 160);
+      ctx.fillStyle = '#451a03'; // Dalam lemari
+      ctx.fillRect(740, 80, 120, 45); // Rak 1
+      ctx.fillRect(740, 132, 120, 45); // Rak 2
+      ctx.fillRect(740, 184, 120, 46); // Rak 3
+
+      // Buku-buku warna-warni di rak 1
+      const bookColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+      for (let b = 0; b < 7; b++) {
+        ctx.fillStyle = bookColors[b % bookColors.length];
+        ctx.fillRect(744 + b * 9, 88, 7, 34);
+      }
+      // Globe mini di rak 1 sebelah kanan
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(835, 102, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Piala emas di rak 2
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.moveTo(760, 142);
+      ctx.lineTo(780, 142);
+      ctx.lineTo(775, 160);
+      ctx.lineTo(765, 160);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillRect(768, 160, 4, 8);
+      ctx.fillRect(764, 168, 12, 4);
+
+      // Buku-buku tebal & berkas di rak 3
+      for (let b = 0; b < 8; b++) {
+        ctx.fillStyle = bookColors[(b + 2) % bookColors.length];
+        ctx.fillRect(744 + b * 10, 192, 8, 34);
+      }
+
+      // Pot Tanaman Hias Hijau di lantai dekat rak buku
+      ctx.fillStyle = '#92400e'; // Pot tanah liat
+      ctx.beginPath();
+      ctx.moveTo(740, 395);
+      ctx.lineTo(770, 395);
+      ctx.lineTo(764, 420);
+      ctx.lineTo(746, 420);
+      ctx.closePath();
+      ctx.fill();
+      // Daun tanaman hijau segar
+      ctx.fillStyle = '#16a34a';
+      ctx.beginPath();
+      ctx.arc(755, 388, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(744, 392, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(766, 392, 10, 0, Math.PI * 2);
+      ctx.fill();
+
+      // G. Tempat Sampah & Sapu di Dekat Pintu/Sudut Kanan
+      ctx.fillStyle = '#64748b'; // Tempat sampah
+      ctx.fillRect(840, 390, 24, 30);
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(837, 387, 30, 4);
+
+      // ==========================================
+      // PAPAN TULIS HIJAU BESAR DENGAN TO-DO LIST SETIAP KELAS
+      // ==========================================
+      const currentScore = scoreRef.current;
+      let activeLevel = 1;
+      if (currentScore < 500) activeLevel = 1;
+      else if (currentScore < 1200) activeLevel = 2;
+      else if (currentScore < 2500) activeLevel = 3;
+      else activeLevel = 4;
+
+      ctx.fillStyle = '#78350f'; // Bingkai kayu papan tulis
+      ctx.fillRect(175, 46, 545, 195);
+      ctx.fillStyle = '#064e3b'; // Permukaan papan tulis hijau
+      ctx.fillRect(185, 56, 525, 175);
+
+      // Tempat Kapur & Penghapus di bawah papan tulis
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(230, 231, 140, 7);
+      ctx.fillStyle = '#f8fafc'; // Kapur putih
+      ctx.fillRect(240, 228, 12, 3);
+      ctx.fillStyle = '#fef08a'; // Kapur kuning
+      ctx.fillRect(256, 228, 12, 3);
+      ctx.fillStyle = '#475569'; // Penghapus kayu
+      ctx.fillRect(280, 226, 28, 5);
+
+      // Judul Papan Tulis (Kapur Putih)
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 13px "Share Tech Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('📋 TO-DO LIST UJIAN KELAS (TARGET KURIKULUM)', 200, 75);
+
+      // Garis kapur pembatas
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(200, 83);
+      ctx.lineTo(690, 83);
+      ctx.stroke();
+
+      // Daftar To-Do List untuk Setiap Kelas
+      const todoItems = [
+        {
+          lvl: 1,
+          name: 'KELAS 1',
+          desc: 'Perkalian, pembagian & pengurangan minus dasar',
+          target: 'Skor 0 - 500',
+          completed: currentScore >= 500,
+          current: activeLevel === 1,
+        },
+        {
+          lvl: 2,
+          name: 'KELAS 2',
+          desc: 'Puluhan, operasi negatif campuran (misal: 14 - 25)',
+          target: 'Skor 501 - 1200',
+          completed: currentScore >= 1200,
+          current: activeLevel === 2,
+        },
+        {
+          lvl: 3,
+          name: 'KELAS 3',
+          desc: 'Soal kurung variasi: 3 × 1 + (2 + 1), kurung minus',
+          target: 'Skor 1201 - 2500',
+          completed: currentScore >= 2500,
+          current: activeLevel === 3,
+        },
+        {
+          lvl: 4,
+          name: 'KELAS 4 (UNGGULAN)',
+          desc: 'Perpangkatan & kurung kompleks: a² + (b - c)',
+          target: 'Skor 2501+',
+          completed: false,
+          current: activeLevel === 4,
+        },
+      ];
+
+      todoItems.forEach((item, idx) => {
+        const itemY = 104 + idx * 29;
+
+        // Indikator Box / Status
+        if (item.completed) {
+          // Centang hijau selesai
+          ctx.fillStyle = '#34d399';
+          ctx.font = 'bold 13px "Share Tech Mono", monospace';
+          ctx.fillText('✓', 200, itemY);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        } else if (item.current) {
+          // Sedang aktif: icon panah berkedip
+          ctx.fillStyle = '#38bdf8';
+          ctx.font = 'bold 13px "Share Tech Mono", monospace';
+          ctx.fillText('▶', 200, itemY);
+          ctx.fillStyle = '#fef08a'; // Teks kapur kuning mencolok untuk kelas aktif
+        } else {
+          // Belum tercapai
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+          ctx.font = 'bold 12px "Share Tech Mono", monospace';
+          ctx.fillText('○', 200, itemY);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        }
+
+        // Teks Nama Kelas & Status
+        ctx.font = item.current ? 'bold 12px "Share Tech Mono", monospace' : '11px "Share Tech Mono", monospace';
+        ctx.fillText(`[${item.name}]`, 218, itemY);
+
+        // Deskripsi Variasi Soal
+        ctx.font = '11px "Share Tech Mono", monospace';
+        ctx.fillText(item.desc, 335, itemY);
+
+        // Target Skor
+        ctx.font = '10px "Share Tech Mono", monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(item.completed ? 'SELESAI' : item.target, 690, itemY);
+        ctx.textAlign = 'left';
+      });
 
       // Garis Lantai Ruang Kelas (Lantai Ubin)
       const floorY = 420;
@@ -518,32 +798,30 @@ export default function App() {
         ctx.save();
         ctx.fillStyle = '#ffffff';
         ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 6;
         ctx.beginPath();
         ctx.arc(proj.currentX, proj.currentY, 6, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       });
 
-      // 4. MENGGAMBAR SASARAN: GURU (BAPAK & IBU GURU)
+      // 4. MENGGAMBAR BAPAK & IBU GURU (PEMBAWA SOAL MATEMATIKA)
       const enemies = enemiesRef.current;
-      let closestIdx = -1;
-      let minEnemyX = Infinity;
-
+      let closestIdx = 0;
+      let minX = 9999;
       for (let i = 0; i < enemies.length; i++) {
-        if (enemies[i].x < minEnemyX) {
-          minEnemyX = enemies[i].x;
+        if (enemies[i].x < minX) {
+          minX = enemies[i].x;
           closestIdx = i;
         }
       }
 
-      enemies.forEach((guru, index) => {
-        const isTarget = index === closestIdx;
+      enemies.forEach((guru, idx) => {
+        ctx.save();
+        const isTarget = idx === closestIdx;
         const gX = guru.x;
         const gY = guru.y;
-        const bob = Math.sin(guru.walkCycle) * 3; // Animasi langkah kaki guru
-
-        ctx.save();
+        const bob = Math.sin(guru.walkCycle) * 3;
 
         if (guru.isFemale) {
           // --- IBU GURU ---
@@ -601,7 +879,7 @@ export default function App() {
           ctx.fillRect(gX + 14, gY + 91, 14, 6);
           ctx.fillRect(gX + 28, gY + 91, 14, 6);
 
-          // Kemeja Batik / Dinas Cokelat Rapi Bapak Guru
+          // Kemeja Batik Cokelat Rapi Bapak Guru
           ctx.fillStyle = '#92400e';
           ctx.fillRect(gX + 14, gY + 22 + bob, 28, 34);
           // Kerah kemeja
@@ -647,20 +925,21 @@ export default function App() {
           ctx.fillStyle = '#38bdf8';
           ctx.beginPath();
           const arrowX = gX + guru.width / 2;
-          ctx.moveTo(arrowX, gY - 48);
-          ctx.lineTo(arrowX - 6, gY - 56);
-          ctx.lineTo(arrowX + 6, gY - 56);
+          ctx.moveTo(arrowX, gY - 50);
+          ctx.lineTo(arrowX - 6, gY - 58);
+          ctx.lineTo(arrowX + 6, gY - 58);
           ctx.closePath();
           ctx.fill();
         }
 
-        // Papan Soal Matematika di Atas Kepala Guru
-        const boxWidth = 100;
-        const boxHeight = 32;
+        // Papan Soal Matematika di Atas Kepala Guru (Lebar responsif untuk soal tanda kurung & rumus panjang)
+        const qLength = guru.question.length;
+        const boxWidth = Math.max(110, qLength * 10 + 20);
+        const boxHeight = 34;
         const boxX = gX + guru.width / 2 - boxWidth / 2;
-        const boxY = gY - 42;
+        const boxY = gY - 44;
 
-        // Background papan soal (seperti kertas ujian putih dengan border tajam)
+        // Background papan soal
         ctx.fillStyle = isTarget ? '#ffffff' : '#f1f5f9';
         ctx.strokeStyle = isTarget ? '#0284c7' : '#94a3b8';
         ctx.lineWidth = isTarget ? 2.5 : 1.5;
@@ -673,12 +952,13 @@ export default function App() {
         ctx.font = 'bold 9px "Share Tech Mono", monospace';
         ctx.textAlign = 'center';
         ctx.fillStyle = isTarget ? '#0284c7' : '#64748b';
-        ctx.fillText(guru.isFemale ? 'BU GURU' : 'PAK GURU', gX + guru.width / 2, boxY + 9);
+        ctx.fillText(guru.isFemale ? 'BU GURU' : 'PAK GURU', gX + guru.width / 2, boxY + 10);
 
-        // Soal Matematika
-        ctx.font = 'bold 16px "Share Tech Mono", monospace';
+        // Soal Matematika (Ukuran font dinamis menyesuaikan panjang teks rumus)
+        const fontSize = qLength > 14 ? 13 : qLength > 10 ? 14 : 16;
+        ctx.font = `bold ${fontSize}px "Share Tech Mono", monospace`;
         ctx.fillStyle = '#0f172a';
-        ctx.fillText(guru.question, gX + guru.width / 2, boxY + 23);
+        ctx.fillText(guru.question, gX + guru.width / 2, boxY + 25);
 
         ctx.restore();
       });
@@ -705,32 +985,39 @@ export default function App() {
         ctx.restore();
       });
 
-      // 7. HUD DI DALAM CANVAS (SKOR & INPUT BOX)
+      // 7. HUD DI DALAM CANVAS: NILAI, KOMBO, & WAKTU DI BAWAH KOMBO
       if (gameStateRef.current === 'PLAYING') {
-        // Skor Nilai Ujian
+        // A. Skor Nilai Ujian
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 18px "Share Tech Mono", monospace';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
+        ctx.fillText(`NILAI : ${scoreRef.current}`, 24, 22);
 
-        ctx.fillText(`NILAI : ${scoreRef.current}`, 24, 25);
-
+        // B. Kombo Beruntun
         if (comboRef.current > 0) {
           ctx.fillStyle = '#38bdf8';
-          ctx.fillText(`KOMBO : ${comboRef.current}x 🔥`, 24, 50);
+          ctx.fillText(`KOMBO : ${comboRef.current}x 🔥`, 24, 46);
         } else {
           ctx.fillStyle = '#94a3b8';
-          ctx.fillText('KOMBO : 0x', 24, 50);
+          ctx.fillText('KOMBO : 0x', 24, 46);
         }
 
-        // Kotak Input Jawaban di Tengah Atas
+        // C. WAKTU BERTAHAN TEPAT DI BAWAH KOMBO
+        const totalSecs = survivedTimeRef.current;
+        const mins = Math.floor(totalSecs / 60).toString().padStart(2, '0');
+        const secs = (totalSecs % 60).toString().padStart(2, '0');
+        ctx.fillStyle = '#f59e0b'; // Warna amber cerah
+        ctx.fillText(`WAKTU : ${mins}:${secs} ⏱`, 24, 70);
+
+        // D. Kotak Input Jawaban di Tengah Atas
         const barWidth = 240;
         const barHeight = 44;
         const barX = canvas.width / 2 - barWidth / 2;
-        const barY = 18;
+        const barY = 14;
 
         ctx.save();
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -744,11 +1031,11 @@ export default function App() {
 
         const inputStr = currentInputRef.current;
         if (inputStr) {
-          ctx.fillStyle = '#38bdf8';
+          ctx.fillStyle = inputStr.startsWith('-') ? '#f59e0b' : '#38bdf8';
           ctx.fillText(inputStr, canvas.width / 2, barY + barHeight / 2 + 1);
         } else {
           ctx.fillStyle = '#64748b';
-          ctx.font = 'bold 18px "Share Tech Mono", monospace';
+          ctx.font = 'bold 16px "Share Tech Mono", monospace';
           ctx.fillText('KETIK JAWABAN...', canvas.width / 2, barY + barHeight / 2 + 1);
         }
         ctx.restore();
@@ -779,7 +1066,7 @@ export default function App() {
 
           <div className="flex items-center gap-3 text-xs text-slate-400">
             <span className="hidden sm:inline">
-              Input: <kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-sky-300">0-9</kbd> + <kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-sky-300">ENTER</kbd>
+              Input: <kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-sky-300">0-9</kbd>, <kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-amber-300">-</kbd> + <kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-300">ENTER</kbd>
             </span>
             {highScore > 0 && (
               <span className="text-amber-400 font-bold">
@@ -802,7 +1089,7 @@ export default function App() {
             className="w-full h-full block"
           />
 
-          {/* Overlays (Start Screen, Game Over, Top Right Timer & HUD) */}
+          {/* Overlays (Start Screen, Game Over, Top Right Sound/Fullscreen Buttons) */}
           <GameHUD
             gameState={gameState}
             score={score}
@@ -821,35 +1108,16 @@ export default function App() {
           />
         </div>
 
-        {/* Keypad Sentuh / Mouse */}
+        {/* Keypad Sentuh / Mouse (Termasuk tombol Minus '-') */}
         {showKeypad && (
           <div className="w-full mt-2 transition-all duration-200">
             <CyberKeypad
               onDigit={handleDigit}
+              onMinus={handleMinus}
               onBackspace={handleBackspace}
               onSubmit={checkAnswer}
               disabled={gameState !== 'PLAYING'}
             />
-          </div>
-        )}
-
-        {/* Level Progression Bar */}
-        {gameState === 'PLAYING' && (
-          <div className="w-full max-w-md mt-2 px-2">
-            <div className="flex justify-between items-center text-[11px] text-slate-400 font-mono mb-1">
-              <span className="text-sky-300 font-semibold">
-                {getDifficultyLevel(score).label}
-              </span>
-              <span>
-                Target: {getDifficultyLevel(score).nextThreshold} pts
-              </span>
-            </div>
-            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-              <div
-                className="h-full bg-gradient-to-r from-sky-400 to-emerald-400 transition-all duration-300"
-                style={{ width: `${getDifficultyLevel(score).progressPercent}%` }}
-              ></div>
-            </div>
           </div>
         )}
       </div>
